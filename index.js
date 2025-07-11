@@ -67,7 +67,7 @@ async function send(alias, to, subj, html, attach) {
     from: alias + '@' + process.env.DOMAIN,
     to: to,
     subject: subj,
-    html: html,
+    html: html || ' ',
     attachments: attach.map(x => ({ filename: x[0], content: x[1] }))
   });
 }
