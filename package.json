@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.0",
+    "mailparser": "^3.7.4",
+    "resend": "^4.6.0"
+  }
+}
