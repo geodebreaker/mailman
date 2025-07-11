@@ -21,12 +21,15 @@ cli.on('messageCreate', /** @param {discord.Message} t */ async t => {
   to = to.filter(x => x && x != alias + '@' + process.env.DOMAIN);
   to = to.filter((x, i, a) => a.indexOf(x) == i);
   let body = t == m ? t.content.replace(/^to: .*?\n/, '') : t.content;
-  let r = await send(alias, to, subj, body);
+  let attach = await Promise.all(t.attachments.map(async x => [x.name,
+  Buffer.from(await fetch(x.url).then(x => x.arrayBuffer()))]));
+  let r = await send(alias, to, subj, body, attach);
   if (r.error) console.error(r.error);
 });
 cli.on('threadCreate', t => {
   if (t.parent.parent?.name == 'mail') t.join();
 });
+/** @returns {discord.ThreadChannel} */
 async function getThread(alias, subj) {
   let guild = await cli.guilds.fetch(process.env.BOTGUILD);
   let channels = await guild.channels.fetch();
@@ -59,19 +62,26 @@ async function getThread(alias, subj) {
 cli.on('ready', () => console.log('ready'));
 cli.login(process.env.BOTTOKEN);
 
-async function send(alias, to, subj, html) {
+async function send(alias, to, subj, html, attach) {
   return await resend.emails.send({
     from: alias + '@' + process.env.DOMAIN,
     to: to,
     subject: subj,
     html: html,
+    attachments: attach.map(x => ({ filename: x[0], content: x[1] }))
   });
 }
-async function recv(alias, from, to, subj, html) {
+async function recv(alias, from, to, subj, html, attach) {
   let t = await getThread(alias, subj);
+  let as = [];
+  attach.forEach(x => {
+    let a = new discord.AttachmentBuilder(x[1], { name: x[0] });
+    as.push(a);
+  });
   t.send({
     content: 'from: `' + from + '`\nto: `' + to + '`\nbody:```\n' +
-      html.replaceAll('```', '``\u200c`') + '```'
+      html.replaceAll('```', '``\u200c`') + '```',
+    files: as
   });
 }
 
@@ -87,7 +97,9 @@ require('http').createServer(async (req, res) => {
   let to = (m.to.text + ',' + (m.cc?.text || '') +
     ',' + (m.bcc?.text || '')).split(',');
   to = to.filter((x, i, a) => x && a.indexOf(x) == i);
-  recv(req.url.replace('/', ''), m.from.text, to, m.subject.replace('Re: ', ''), m.text);
+  recv(req.url.replace('/', ''), m.from.text, to,
+    m.subject.replace('Re: ', ''), m.text, m.attachments.map(x => 
+      [x.filename, x.content]));
   res.writeHead(204).end();
 }).listen(process.env.PORT || 8080);
 
