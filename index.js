@@ -103,5 +103,5 @@ require('http').createServer(async (req, res) => {
   res.writeHead(204).end();
 }).listen(process.env.PORT || 8080);
 
-process.on('uncaughtException', console.error);
-process.on('unhandledRejection', console.error);
+// process.on('uncaughtException', console.error);
+// process.on('unhandledRejection', console.error);
